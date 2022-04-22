@@ -7,12 +7,28 @@
 //
 // 21/04/22 20:55:37
 //
-// convert binary files to kim format
+// converts binary files to kim format
+//   no NULL at end of line
+//   no ending record
 //
 //  bin2kim <file_in> [<offset_hex>]
 //    output to stdout
 //    default offset 0x200
 //--------------------------------------------------------------------------
+/*
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 /*
 The paper tape LOAD and DUMP routines store and retrieve data in
 a specific format designed to insure error free recovery.  Each byte
@@ -41,7 +57,7 @@ the transmission.
 ; 00  0001                  0001
 
 
-
+From https://en.wikipedia.org/wiki/MOS_Technology_file_format
 History
 The KIM-1 single-board computer specified a file format for magnetic tape and a
 format for paper tape. The paper tape format was adapted slightly and has been
@@ -66,33 +82,27 @@ the transmission. The file ends with a XOFF.
 
 ;0A03B02041626F7274696E67240437
 
-
 ;03 12EE 4C 49 42 01DA
 all in chk
 
-;08  05 70  30 30 30 31 0D 0A 0D 0A  016C
-
-
 ;18  02 00  38 AD 04 01 E9 1D 29 80 85 08 AD 05 01 E9 04 85 09 
 38 A5 08 E9 00 85 08  07 C9
-all (-;) in chk
+all in chk
 */
 
 #include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <getopt.h>
+
+#define AUTHOR "Fabio Sturman fabio.sturman@gmail.com"
+#define VERSION "Version 0.1 - 2022"
 
 int getrec(unsigned char buf[], int max_len, FILE *f)
 {
-    int i;
-    i=0;
-    if(feof(f)) return -1;
-    while(!feof(f) && i<max_len) buf[i++]=fgetc(f);
-    if(feof(f)) i--;
-    return(i);
+  int i;
+  i=0;
+  if(feof(f)) return -1;
+  while(!feof(f) && i<max_len) buf[i++]=fgetc(f);
+  if(feof(f)) i--;
+  return(i);
 }
 
 int main(int argc, char *argv[])
@@ -104,8 +114,11 @@ int main(int argc, char *argv[])
   if(argc<2)
   {
     printf("bin2kim <file_in> [<offset_hex>]\n");
+    printf("  converts binary files to kim format\n");
     printf("  output to stdout\n");
     printf("  default offset 0x200\n");
+    printf("  by "); printf(AUTHOR); printf("\n");
+    printf("  "); printf(VERSION); printf(" - under license GPL3\n");
     return 1;
   }
   if(argc==3) sscanf(argv[2],"%X",&ofs);
@@ -129,7 +142,7 @@ int main(int argc, char *argv[])
       putchar(';');
       printf("%02X",n&0xff);
       chk+=(n&0xff);
-      printf("%04X",tofs);
+      printf("%04X",tofs&0xffff);
       chk+=(tofs&0xff);
       chk+=(tofs/256)&0xff;
       for(i=0;i<n;i++)
@@ -142,6 +155,7 @@ int main(int argc, char *argv[])
       ndat+=n;
     }
   }
+  //last record
   //if(ndat>0) printf(";00%04X%04X\n",ndat,ndat);  // last record
   return 0;
 }
